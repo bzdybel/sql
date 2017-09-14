@@ -1,0 +1,105 @@
+SET SERVEROUTPUT ON;
+SET ECHO OFF;
+
+---1
+DECLARE
+liczba CONSTANT NUMBER(3)  := 522;
+tekst VARCHAR2(20) := 'Jakis tekst';
+data DATE := TO_DATE('14-07-1997', 'dd-mm-yyyy');
+BEGIN
+  DBMS_OUTPUT.PUT_LINE('Pierwsza zmienna: '|| liczba);
+  DBMS_OUTPUT.PUT_LINE('Druga zmienna '|| tekst);
+  DBMS_OUTPUT.PUT_LINE('Trzecia zmienna: '|| data);
+END;
+
+
+---2
+DECLARE
+dni NUMBER(10);
+tygodnie NUMBER(10);
+miesiace NUMBER(10);
+BEGIN
+SELECT TRUNC(sysdate - TO_DATE('14-07-1997', 'DD-MM-YYYY')) INTO dni FROM dual;
+SELECT TRUNC((sysdate - TO_DATE('14-07-1997', 'DD-MM-YYYY'))/7) INTO tygodnie FROM dual;
+SELECT TRUNC(MONTHS_BETWEEN(sysdate, TO_DATE('14-07-1997', 'DD-MM-YYYY'))) INTO miesiace FROM dual;
+  DBMS_OUTPUT.PUT_LINE('Od 14-07-1997 minê³o tyle dni: '||dni);
+  DBMS_OUTPUT.PUT_LINE('Tyle tygodni: '||tygodnie);
+  DBMS_OUTPUT.PUT_LINE('Tyle miesiecy: '||miesiace);
+END;
+
+---3
+
+SET SERVEROUTPUT ON;
+
+DECLARE
+salary1 emp.salary%TYPE;
+min_salary emp.salary%TYPE;
+max_salary emp.salary%TYPE;
+uv_imie emp.first_name%TYPE;
+uv_nazwisko emp.last_name%TYPE;
+uv_salary emp.salary%TYPE;
+licz PLS_INTEGER;
+BEGIN
+SELECT MAX(salary) INTO max_salary FROM emp;
+SELECT MIN(salary) INTO min_salary FROM emp;
+SELECT last_name, first_name, salary INTO uv_nazwisko, uv_imie, uv_salary
+FROM emp 
+WHERE salary = max_salary;
+DBMS_OUTPUT.PUT_LINE('Imie: ' || uv_imie || ' Nazwisko: ' || uv_nazwisko || ' zarabia najwiecej');
+SELECT last_name, first_name, salary INTO uv_nazwisko, uv_imie, uv_salary
+FROM emp
+WHERE salary = min_salary;
+DBMS_OUTPUT.PUT_LINE('Imie: ' || uv_imie || ' Nazwisko: ' || uv_nazwisko || ' zarabia najmniej' );
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+DBMS_OUTPUT.PUT_LINE('Zapytanie nie zwróci³o danych.');
+WHEN TOO_MANY_ROWS THEN
+SELECT COUNT(*) INTO licz FROM emp;
+DBMS_OUTPUT.PUT_LINE('Zapytanie zwróci³o '||licz||' rekordów.');     
+END;
+
+---4
+/*kursor jawny*/
+DECLARE
+CURSOR emp_curs IS
+SELECT * FROM emp ORDER BY last_name; 
+
+uv_emp emp_curs%ROWTYPE;
+BEGIN
+OPEN emp_curs;
+LOOP
+FETCH emp_curs INTO uv_emp;
+EXIT
+WHEN emp_curs%NOTFOUND;
+DBMS_OUTPUT.PUT_LINE(uv_emp.last_name|| ' ' || uv_emp.first_name || ' - ' || uv_emp.title);
+END LOOP;
+CLOSE emp_curs;
+END;
+
+/*bez kursora*/
+BEGIN
+FOR uv_emp IN (SELECT * FROM emp ORDER BY last_name)
+ LOOP
+DBMS_OUTPUT.PUT_LINE(uv_emp.last_name|| ' ' || uv_emp.first_name || ' - ' || uv_emp.title);
+END LOOP;
+END;
+
+---6
+CREATE TABLE emp_new AS (SELECT * FROM emp); 
+--a
+BEGIN
+UPDATE emp_new
+SET salary=1.2*salary
+WHERE
+salary < (SELECT (1/2)*AVG(salary) FROM emp_new);
+--b
+UPDATE emp_new
+SET salary=1.1*salary
+WHERE
+salary BETWEEN (SELECT (1/2)*AVG(salary) FROM emp_new) AND (SELECT (5/6)*AVG(salary) FROM emp_new);
+--c
+UPDATE emp_new
+SET salary=1.05*salary
+WHERE
+salary > (SELECT (5/6)*AVG(salary) FROM emp_new);
+END;

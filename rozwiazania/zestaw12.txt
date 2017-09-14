@@ -1,0 +1,300 @@
+SET SERVEROUTPUT ON;
+
+CREATE TABLE top_n_emps(
+id NUMBER(7),
+last_name VARCHAR2(25),
+first_name VARCHAR2(25),
+salary NUMBER(11,2)
+); 
+
+CREATE OR REPLACE PACKAGE pracownicy AS
+
+---1
+ 
+PROCEDURE add_emp(
+  in_last_name emp.last_name%TYPE,
+  in_first_name emp.first_name%TYPE DEFAULT NULL,
+  in_id IN emp.id%TYPE DEFAULT NULL,
+  in_userid IN emp.userid%TYPE DEFAULT NULL,
+  in_start_date IN emp.start_date%TYPE DEFAULT NULL,
+  in_comments IN emp.comments%TYPE DEFAULT NULL,
+  in_manager_id IN emp.manager_id%TYPE DEFAULT NULL,
+  in_title IN emp.title%TYPE DEFAULT NULL,
+  in_dept_id IN emp.dept_id%TYPE DEFAULT NULL,
+  in_salary IN emp.salary%TYPE DEFAULT NULL,
+  in_commission_pct IN emp.commission_pct%TYPE DEFAULT NULL
+  );
+
+---2
+ 
+PROCEDURE change_emp(
+  in_id IN emp.id%TYPE,
+  in_last_name IN emp.last_name%TYPE DEFAULT NULL,
+  in_first_name IN emp.first_name%TYPE DEFAULT NULL,
+  in_userid IN emp.userid%TYPE DEFAULT NULL,
+  in_start_date IN emp.start_date%TYPE DEFAULT NULL,
+  in_comments IN emp.comments%TYPE DEFAULT NULL,
+  in_manager_id IN emp.manager_id%TYPE DEFAULT NULL,
+  in_title IN emp.title%TYPE DEFAULT NULL,
+  in_dept_id IN emp.dept_id%TYPE DEFAULT NULL,
+  in_salary IN emp.salary%TYPE DEFAULT NULL,
+  in_commission_pct IN emp.commission_pct%TYPE DEFAULT NULL
+  );
+
+---3
+ PROCEDURE delete_emp(
+in_id IN emp.id%TYPE
+);
+
+---4
+ PROCEDURE change_salary(
+in_id IN emp.id%TYPE,
+in_pct IN NUMBER
+);
+
+---5
+PROCEDURE top_n_emp(
+in_n IN NUMBER
+);
+
+---6
+ PROCEDURE change_dept(
+in_emp_id IN emp.id%TYPE,
+in_dept_id IN emp.dept_id%TYPE
+);
+
+---7 
+FUNCTION stat_emp(
+in_parameter VARCHAR2
+)RETURN NUMBER;
+
+END pracownicy;
+
+
+CREATE OR REPLACE PACKAGE BODY pracownicy AS
+
+PROCEDURE add_emp(
+  in_last_name emp.last_name%TYPE,
+  in_first_name emp.first_name%TYPE DEFAULT NULL,
+  in_id IN emp.id%TYPE DEFAULT NULL,
+  in_userid IN emp.userid%TYPE DEFAULT NULL,
+  in_start_date IN emp.start_date%TYPE DEFAULT NULL,
+  in_comments IN emp.comments%TYPE DEFAULT NULL,
+  in_manager_id IN emp.manager_id%TYPE DEFAULT NULL,
+  in_title IN emp.title%TYPE DEFAULT NULL,
+  in_dept_id IN emp.dept_id%TYPE DEFAULT NULL,
+  in_salary IN emp.salary%TYPE DEFAULT NULL,
+  in_commission_pct IN emp.commission_pct%TYPE DEFAULT NULL
+  ) AS
+ 
+uv_max_id NUMBER;
+ 
+BEGIN
+  SELECT MAX(id) INTO uv_max_id FROM emp;
+  INSERT INTO emp
+  VALUES(uv_max_id + 1, in_last_name, in_first_name, in_userid, in_start_date,
+        in_comments, in_manager_id, in_title, in_dept_id, in_salary, in_commission_pct);
+  COMMIT;
+END add_emp;
+
+---2
+PROCEDURE change_emp(
+  in_id IN emp.id%TYPE,
+  in_last_name IN emp.last_name%TYPE DEFAULT NULL,
+  in_first_name IN emp.first_name%TYPE DEFAULT NULL,
+  in_userid IN emp.userid%TYPE DEFAULT NULL,
+  in_start_date IN emp.start_date%TYPE DEFAULT NULL,
+  in_comments IN emp.comments%TYPE DEFAULT NULL,
+  in_manager_id IN emp.manager_id%TYPE DEFAULT NULL,
+  in_title IN emp.title%TYPE DEFAULT NULL,
+  in_dept_id IN emp.dept_id%TYPE DEFAULT NULL,
+  in_salary IN emp.salary%TYPE DEFAULT NULL,
+  in_commission_pct IN emp.commission_pct%TYPE DEFAULT NULL
+  ) AS
+BEGIN
+    IF in_last_name IS NOT NULL THEN
+        UPDATE emp
+        SET emp.last_name = in_last_name
+        WHERE emp.id = in_id;
+    END IF;
+ 
+    IF in_first_name IS NOT NULL THEN
+        UPDATE emp
+        SET emp.first_name = in_first_name
+        WHERE emp.id = in_id;
+    END IF;
+ 
+    IF in_userid IS NOT NULL THEN
+        UPDATE emp
+        SET emp.userid = in_userid
+        WHERE emp.id = in_id;
+    END IF;
+ 
+    IF in_start_date IS NOT NULL THEN
+        UPDATE emp
+        SET emp.start_date = in_start_date
+        WHERE emp.id = in_id;
+    END IF;
+ 
+    IF in_comments IS NOT NULL THEN
+        UPDATE emp
+        SET emp.comments = in_comments
+        WHERE emp.id = in_id;
+    END IF;
+ 
+    IF in_manager_id IS NOT NULL THEN
+        UPDATE emp
+        SET emp.manager_id = in_manager_id
+        WHERE emp.id = in_id;
+    END IF;
+ 
+    IF in_title IS NOT NULL THEN
+        UPDATE emp
+        SET emp.title = in_title
+        WHERE emp.id = in_id;
+    END IF;
+ 
+    IF in_dept_id IS NOT NULL THEN
+        UPDATE emp
+        SET emp.dept_id = in_dept_id
+        WHERE emp.id = in_id;
+    END IF;
+ 
+    IF in_salary IS NOT NULL THEN
+        UPDATE emp
+        SET emp.salary = in_salary
+        WHERE emp.id = in_id;
+    END IF;
+ 
+    IF in_commission_pct IS NOT NULL THEN
+        UPDATE emp
+        SET emp.commission_pct = in_commission_pct
+        WHERE emp.id = in_id;
+    END IF;
+COMMIT;
+END change_emp;
+
+---3
+PROCEDURE delete_emp(
+    in_id IN emp.id%TYPE
+) AS
+    ex_no_emp EXCEPTION;
+    uv_max_id NUMBER;
+BEGIN
+  SELECT MAX(id) INTO uv_max_id FROM emp;
+    IF in_id > uv_max_id THEN
+    RAISE ex_no_emp;
+    ELSE
+    DELETE FROM emp
+    WHERE emp.id = in_id;
+    END IF;
+COMMIT;
+EXCEPTION
+    WHEN ex_no_emp THEN
+	DBMS_OUTPUT.PUT_LINE('Nie ma takiego pracownika'); 
+
+END delete_emp;
+
+
+---4
+PROCEDURE change_salary(
+    in_id IN emp.id%TYPE,
+    in_pct IN NUMBER
+) AS
+    uv_max_id NUMBER;
+    ex_invalid_value EXCEPTION;
+    ex_no_emp EXCEPTION;
+BEGIN
+SELECT MAX(id) INTO uv_max_id FROM emp;
+    IF in_pct > 100 OR in_pct < 0 THEN
+        RAISE ex_invalid_value;
+    ELSIF in_id > uv_max_id THEN
+        RAISE ex_no_emp;
+    ELSE
+        UPDATE emp
+        SET emp.salary = emp.salary + emp.salary * (in_pct/100)
+        WHERE emp.id = in_id;
+    END IF;
+COMMIT;
+EXCEPTION
+      WHEN ex_invalid_value THEN 
+	DBMS_OUTPUT.PUT_LINE('Zla wartosc'); 
+      WHEN ex_no_emp THEN 
+	DBMS_OUTPUT.PUT_LINE('Nie ma takiego pracownika'); 
+END change_salary;
+
+---5
+PROCEDURE top_n_emp(
+    in_n IN NUMBER
+) IS
+    CURSOR cur_emp IS SELECT * FROM emp ORDER BY salary DESC;
+    emps cur_emp%ROWTYPE;
+BEGIN
+    OPEN cur_emp;
+FOR i IN 1..in_n LOOP
+    FETCH cur_emp INTO emps;
+    EXIT WHEN cur_emp%NOTFOUND;
+    DBMS_OUTPUT.PUT_LINE(RPAD(emps.id, 5) || ' ' || RPAD(emps.last_name,15) || ' ' || RPAD(emps.first_name,15) || ' ' || LPAD(emps.salary,6));
+  INSERT INTO top_n_emps VALUES(
+     emps.id,
+     emps.last_name,
+     emps.first_name,
+     emps.salary);
+END LOOP;
+COMMIT;
+END top_n_emp;
+
+---6
+PROCEDURE change_dept(
+    in_emp_id IN emp.id%TYPE,
+    in_dept_id IN emp.dept_id%TYPE
+) AS
+    uv_dept_id NUMBER;
+    uv_max_id NUMBER;
+    ex_no_emp EXCEPTION;
+BEGIN
+    SELECT MAX(id) INTO uv_max_id FROM emp;
+    SELECT d.id INTO uv_dept_id FROM dept d WHERE d.id=in_dept_id GROUP BY id;
+ 
+IF in_emp_id > uv_max_id THEN
+    RAISE ex_no_emp;
+ELSE
+    UPDATE emp
+    SET emp.dept_id = uv_dept_id
+    WHERE emp.id = in_emp_id;
+END IF;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+	DBMS_OUTPUT.PUT_LINE('Zla wartosc'); 
+      WHEN ex_no_emp THEN 
+	DBMS_OUTPUT.PUT_LINE('Nie ma takiego pracownika'); 
+COMMIT;
+END change_dept;
+---7
+FUNCTION stat_emp(
+    in_parameter VARCHAR2
+)RETURN NUMBER IS
+    res NUMBER:=0;
+ex_wrong_parameter EXCEPTION;
+BEGIN
+IF in_parameter NOT IN('AVG','SUM','MIN','MAX') THEN RAISE ex_wrong_parameter;
+END IF;
+IF in_parameter = 'MAX' THEN
+    SELECT MAX(salary) INTO res FROM emp;
+ELSIF in_parameter = 'MIN' THEN
+    SELECT MIN(salary) INTO res FROM emp;
+ELSIF in_parameter = 'AVG' THEN
+    SELECT AVG(salary) INTO res FROM emp;
+ELSE
+    SELECT SUM(salary) INTO res FROM emp;
+END IF;
+ 
+RETURN res;
+ 
+EXCEPTION
+    WHEN ex_wrong_parameter THEN
+	DBMS_OUTPUT.PUT_LINE('Zla wartosc'); 
+END stat_emp;
+
+END pracownicy;
+ 
